@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{app::Events, prelude::*};
 use direction::CardinalDirection;
 use rand::prelude::random;
 use std::time::Duration;
@@ -14,6 +14,8 @@ fn main() {
     .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
     .insert_resource(SnakeMoveTimer::default())
     .insert_resource(SnakeSegments::default())
+    .insert_resource(LastTailPosition::default())
+    .add_event::<GrowthEvent>()
     .add_plugins(DefaultPlugins)
     .add_startup_system(setup.system())
     .add_startup_stage("game_setup", SystemStage::single(spawn_snake.system()))
@@ -22,6 +24,7 @@ fn main() {
     .add_system(position_translation.system())
     .add_system(food_spawner.system())
     .add_system(snake_timer.system())
+    .add_system(snake_eating.system())
     .run();
 }
 
@@ -87,6 +90,9 @@ impl Default for FoodSpawnTimer {
   }
 }
 
+#[derive(Debug)]
+struct GrowthEvent;
+
 struct SnakeMoveTimer(Timer);
 
 impl Default for SnakeMoveTimer {
@@ -94,6 +100,9 @@ impl Default for SnakeMoveTimer {
     Self(Timer::new(Duration::from_millis(500), true))
   }
 }
+
+#[derive(Debug, Default)]
+struct LastTailPosition(Option<Position>);
 
 fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
   commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -131,10 +140,18 @@ fn spawn_snake(
 fn snake_movement(
   keyboard_input: Res<Input<KeyCode>>,
   snake_timer: ResMut<SnakeMoveTimer>,
+  segments: ResMut<SnakeSegments>,
+  mut last_tail_position: ResMut<LastTailPosition>,
   mut heads: Query<(Entity, &mut SnakeHead)>,
   mut positions: Query<&mut Position>,
 ) {
   if let Some((head_entity, mut head)) = heads.iter_mut().next() {
+    let segment_positions = segments
+      .0
+      .iter()
+      .filter_map(|e| positions.get_mut(*e).ok().map(|p| p.to_owned()))
+      .collect::<Vec<Position>>();
+
     if let Ok(mut head_pos) = positions.get_mut(head_entity) {
       let direction = if keyboard_input.pressed(KeyCode::Up) {
         CardinalDirection::North
@@ -162,6 +179,15 @@ fn snake_movement(
         CardinalDirection::West => head_pos.x -= 1,
         CardinalDirection::East => head_pos.x += 1,
       };
+
+      segment_positions
+        .iter()
+        .zip(segments.0.iter().skip(1))
+        .for_each(|(pos, segment)| {
+          *positions.get_mut(*segment).unwrap() = *pos;
+        });
+
+      last_tail_position.0 = segment_positions.last().copied();
     }
   }
 }
@@ -233,4 +259,25 @@ fn spawn_segment(
     .insert(position)
     .insert(Size::square(0.65))
     .id()
+}
+
+fn snake_eating(
+  mut commands: Commands,
+  snake_timer: ResMut<SnakeMoveTimer>,
+  mut growth_events: ResMut<Events<GrowthEvent>>,
+  food_positions: Query<(Entity, &Position), With<Food>>,
+  head_positions: Query<&Position, With<SnakeHead>>,
+) {
+  if !snake_timer.0.finished() {
+    return;
+  }
+
+  for head_position in head_positions.iter() {
+    for (entity, food_position) in food_positions.iter() {
+      if food_position == head_position {
+        commands.entity(entity).despawn();
+        growth_events.send(GrowthEvent);
+      }
+    }
+  }
 }

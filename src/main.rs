@@ -2,7 +2,10 @@ mod assets;
 mod component;
 mod state;
 
-use bevy::prelude::*;
+use bevy::{
+  diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+  prelude::*,
+};
 use bevy_asset_loader::AssetLoader;
 use direction::CardinalDirection;
 use rand::prelude::random;
@@ -28,16 +31,19 @@ fn main() {
     .insert_resource(SnakeMoveTimer::default())
     .insert_resource(SnakeSegments::default())
     .insert_resource(LastTailPosition::default())
-
+    .insert_resource(Score::default())
     .add_event::<GrowthEvent>()
     .add_event::<GameOverEvent>()
-
     .add_state(GameState::Loading)
     .add_plugins(DefaultPlugins)
-
+    .add_plugin(FrameTimeDiagnosticsPlugin::default())
+    .add_plugin(LogDiagnosticsPlugin::default())
     .add_startup_system(setup.system())
-
-    .add_system_set(SystemSet::on_enter(GameState::Running).with_system(spawn_snake.system()))
+    .add_system_set(
+      SystemSet::on_enter(GameState::Running)
+        .with_system(spawn_snake.system())
+        .with_system(setup_score.system()),
+    )
     .add_system_set(
       SystemSet::on_update(GameState::Running)
         .with_system(snake_movement.system())
@@ -47,9 +53,9 @@ fn main() {
         .with_system(snake_timer.system())
         .with_system(snake_eating.system())
         .with_system(snake_growth.system())
-        .with_system(game_over.system()),
+        .with_system(game_over.system())
+        .with_system(update_score.system()),
     )
-
     .run();
 }
 
@@ -58,6 +64,43 @@ const ARENA_HEIGHT: u32 = 10;
 
 fn setup(mut commands: Commands) {
   commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+  commands.spawn_bundle(UiCameraBundle::default());
+}
+
+fn setup_score(mut commands: Commands, fonts: Res<FontAssets>, score: Res<Score>) {
+  commands
+    .spawn_bundle(TextBundle {
+      style: Style {
+        align_self: AlignSelf::FlexEnd,
+        position_type: PositionType::Absolute,
+        position: Rect {
+          bottom: Val::Px(5.0),
+          right: Val::Px(15.0),
+          ..Default::default()
+        },
+        ..Default::default()
+      },
+      text: Text::with_section(
+        *score,
+        TextStyle {
+          font: fonts.font.clone(),
+          font_size: 50.0,
+          color: Color::WHITE,
+        },
+        TextAlignment {
+          horizontal: HorizontalAlign::Center,
+          ..Default::default()
+        },
+      ),
+      ..Default::default()
+    })
+    .insert(ScoreBoard);
+}
+
+fn update_score(mut query: Query<&mut Text, With<ScoreBoard>>, score: Res<Score>) {
+  for mut text in query.iter_mut() {
+    text.sections[0].value = (*score).into();
+  }
 }
 
 fn spawn_snake(
@@ -252,10 +295,12 @@ fn snake_growth(
   last_tail_position: Res<LastTailPosition>,
   mut segments: ResMut<SnakeSegments>,
   mut growth_reader: EventReader<GrowthEvent>,
+  mut score: ResMut<Score>,
   materials: Res<MaterialAssets>,
 ) {
   if growth_reader.iter().next().is_some() {
     if let Some(last_tail_position) = last_tail_position.0 {
+      score.increment();
       segments.0.push(spawn_segment(
         commands,
         &materials.segment_material,
@@ -268,6 +313,7 @@ fn snake_growth(
 fn game_over(
   mut commands: Commands,
   mut reader: EventReader<GameOverEvent>,
+  mut score: ResMut<Score>,
   materials: Res<MaterialAssets>,
   snake_segments: ResMut<SnakeSegments>,
   food: Query<Entity, With<Food>>,
@@ -277,6 +323,7 @@ fn game_over(
     for entity in food.iter().chain(segments.iter()) {
       commands.entity(entity).despawn();
     }
+    score.reset();
     spawn_snake(commands, materials, snake_segments);
   }
 }

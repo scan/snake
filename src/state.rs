@@ -1,7 +1,6 @@
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum GameState {
   Loading,
-  Paused,
   Running,
 }
 

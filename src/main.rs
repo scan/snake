@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::RenderLayers};
 use direction::CardinalDirection;
 use rand::prelude::random;
 use std::time::Duration;
@@ -129,6 +129,7 @@ fn spawn_snake(
       .spawn_bundle(SpriteBundle {
         material: materials.head_material.clone(),
         sprite: Sprite::new(Vec2::new(10.0, 10.0)),
+        transform: Transform::from_xyz(0.0, 0.0, 2.0),
         ..Default::default()
       })
       .insert(SnakeHead::default())
@@ -203,7 +204,9 @@ fn snake_movement(
         .iter()
         .zip(segments.0.iter().skip(1))
         .for_each(|(pos, segment)| {
-          *positions.get_mut(*segment).unwrap() = *pos;
+          if let Ok(mut segment_position) = positions.get_mut(*segment) {
+            *segment_position = *pos;
+          }
         });
 
       last_tail_position.0 = segment_positions.last().copied();
@@ -233,7 +236,7 @@ fn position_translation(windows: Res<Windows>, mut q: Query<(&Position, &mut Tra
       transform.translation = Vec3::new(
         convert(pos.x as f32, window.width() as f32, ARENA_WIDTH as f32),
         convert(pos.y as f32, window.height() as f32, ARENA_HEIGHT as f32),
-        0.0,
+        transform.translation.z,
       )
     }
   }
@@ -249,6 +252,7 @@ fn food_spawner(
     commands
       .spawn_bundle(SpriteBundle {
         material: materials.food_material.clone(),
+        transform: Transform::from_xyz(0.0, 0.0, 1.0),
         ..Default::default()
       })
       .insert(Food)
@@ -272,6 +276,7 @@ fn spawn_segment(
   commands
     .spawn_bundle(SpriteBundle {
       material: material.clone(),
+      transform: Transform::from_xyz(0.0, 0.0, 2.0),
       ..Default::default()
     })
     .insert(SnakeSegment)
@@ -325,7 +330,7 @@ fn game_over(
   materials: Res<Materials>,
   snake_segments: ResMut<SnakeSegments>,
   food: Query<Entity, With<Food>>,
-  segments: Query<Entity, With<SnakeSegments>>,
+  segments: Query<Entity, With<SnakeSegment>>,
 ) {
   if reader.iter().next().is_some() {
     for entity in food.iter().chain(segments.iter()) {

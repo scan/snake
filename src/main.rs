@@ -27,6 +27,7 @@ fn main() {
     .add_system(snake_timer.system())
     .add_system(snake_eating.system())
     .add_system(snake_growth.system())
+    .add_system(game_over.system())
     .run();
 }
 
@@ -194,6 +195,10 @@ fn snake_movement(
         game_over_events.send(GameOverEvent);
       }
 
+      if segment_positions.contains(&head_pos) {
+        game_over_events.send(GameOverEvent);
+      }
+
       segment_positions
         .iter()
         .zip(segments.0.iter().skip(1))
@@ -311,5 +316,21 @@ fn snake_growth(
         last_tail_position,
       ));
     }
+  }
+}
+
+fn game_over(
+  mut commands: Commands,
+  mut reader: EventReader<GameOverEvent>,
+  materials: Res<Materials>,
+  snake_segments: ResMut<SnakeSegments>,
+  food: Query<Entity, With<Food>>,
+  segments: Query<Entity, With<SnakeSegments>>,
+) {
+  if reader.iter().next().is_some() {
+    for entity in food.iter().chain(segments.iter()) {
+      commands.entity(entity).despawn();
+    }
+    spawn_snake(commands, materials, snake_segments);
   }
 }

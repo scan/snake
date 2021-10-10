@@ -1,4 +1,7 @@
-use std::{ops::{Deref, DerefMut}, time::Duration};
+use std::{
+  ops::{Deref, DerefMut},
+  time::Duration,
+};
 
 use bevy::prelude::*;
 use direction::CardinalDirection;

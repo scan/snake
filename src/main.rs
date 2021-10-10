@@ -12,7 +12,7 @@ use crate::{assets::*, component::*, state::*};
 fn main() {
   let mut app = App::build();
 
-  AssetLoader::new(GameState::Loading, GameState::Loading)
+  AssetLoader::new(GameState::Loading, GameState::Running)
     .with_collection::<FontAssets>()
     .init_resource::<MaterialAssets>()
     .build(&mut app);
@@ -28,26 +28,35 @@ fn main() {
     .insert_resource(SnakeMoveTimer::default())
     .insert_resource(SnakeSegments::default())
     .insert_resource(LastTailPosition::default())
+
     .add_event::<GrowthEvent>()
     .add_event::<GameOverEvent>()
+
+    .add_state(GameState::Loading)
     .add_plugins(DefaultPlugins)
+
     .add_startup_system(setup.system())
-    .add_startup_stage("game_setup", SystemStage::single(spawn_snake.system()))
-    .add_system(snake_movement.system())
-    .add_system(size_scaling.system())
-    .add_system(position_translation.system())
-    .add_system(food_spawner.system())
-    .add_system(snake_timer.system())
-    .add_system(snake_eating.system())
-    .add_system(snake_growth.system())
-    .add_system(game_over.system())
+
+    .add_system_set(SystemSet::on_enter(GameState::Running).with_system(spawn_snake.system()))
+    .add_system_set(
+      SystemSet::on_update(GameState::Running)
+        .with_system(snake_movement.system())
+        .with_system(size_scaling.system())
+        .with_system(position_translation.system())
+        .with_system(food_spawner.system())
+        .with_system(snake_timer.system())
+        .with_system(snake_eating.system())
+        .with_system(snake_growth.system())
+        .with_system(game_over.system()),
+    )
+
     .run();
 }
 
 const ARENA_WIDTH: u32 = 10;
 const ARENA_HEIGHT: u32 = 10;
 
-fn setup(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn setup(mut commands: Commands) {
   commands.spawn_bundle(OrthographicCameraBundle::new_2d());
 }
 

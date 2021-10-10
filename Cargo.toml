@@ -9,3 +9,7 @@ edition = "2018"
 bevy = "0.5.0"
 direction = "0.18.1"
 rand = "0.8.4"
+
+[profile.release]
+opt-level = 3 # "s"
+lto = true

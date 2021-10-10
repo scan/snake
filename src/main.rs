@@ -1,4 +1,4 @@
-use bevy::{app::Events, prelude::*};
+use bevy::prelude::*;
 use direction::CardinalDirection;
 use rand::prelude::random;
 use std::time::Duration;
@@ -16,6 +16,7 @@ fn main() {
     .insert_resource(SnakeSegments::default())
     .insert_resource(LastTailPosition::default())
     .add_event::<GrowthEvent>()
+    .add_event::<GameOverEvent>()
     .add_plugins(DefaultPlugins)
     .add_startup_system(setup.system())
     .add_startup_stage("game_setup", SystemStage::single(spawn_snake.system()))
@@ -25,6 +26,7 @@ fn main() {
     .add_system(food_spawner.system())
     .add_system(snake_timer.system())
     .add_system(snake_eating.system())
+    .add_system(snake_growth.system())
     .run();
 }
 
@@ -93,6 +95,9 @@ impl Default for FoodSpawnTimer {
 #[derive(Debug)]
 struct GrowthEvent;
 
+#[derive(Debug)]
+struct GameOverEvent;
+
 struct SnakeMoveTimer(Timer);
 
 impl Default for SnakeMoveTimer {
@@ -144,6 +149,7 @@ fn snake_movement(
   mut last_tail_position: ResMut<LastTailPosition>,
   mut heads: Query<(Entity, &mut SnakeHead)>,
   mut positions: Query<&mut Position>,
+  mut game_over_events: EventWriter<GameOverEvent>,
 ) {
   if let Some((head_entity, mut head)) = heads.iter_mut().next() {
     let segment_positions = segments
@@ -179,6 +185,14 @@ fn snake_movement(
         CardinalDirection::West => head_pos.x -= 1,
         CardinalDirection::East => head_pos.x += 1,
       };
+
+      if head_pos.x < 0
+        || head_pos.x as u32 >= ARENA_WIDTH
+        || head_pos.y < 0
+        || head_pos.y as u32 >= ARENA_HEIGHT
+      {
+        game_over_events.send(GameOverEvent);
+      }
 
       segment_positions
         .iter()
@@ -264,7 +278,7 @@ fn spawn_segment(
 fn snake_eating(
   mut commands: Commands,
   snake_timer: ResMut<SnakeMoveTimer>,
-  mut growth_events: ResMut<Events<GrowthEvent>>,
+  mut growth_events: EventWriter<GrowthEvent>,
   food_positions: Query<(Entity, &Position), With<Food>>,
   head_positions: Query<&Position, With<SnakeHead>>,
 ) {
@@ -278,6 +292,24 @@ fn snake_eating(
         commands.entity(entity).despawn();
         growth_events.send(GrowthEvent);
       }
+    }
+  }
+}
+
+fn snake_growth(
+  commands: Commands,
+  last_tail_position: Res<LastTailPosition>,
+  mut segments: ResMut<SnakeSegments>,
+  mut growth_reader: EventReader<GrowthEvent>,
+  materials: Res<Materials>,
+) {
+  if growth_reader.iter().next().is_some() {
+    if let Some(last_tail_position) = last_tail_position.0 {
+      segments.0.push(spawn_segment(
+        commands,
+        &materials.segment_material,
+        last_tail_position,
+      ));
     }
   }
 }

@@ -103,25 +103,3 @@ impl Default for SnakeMoveTimer {
 
 #[derive(Debug, Default)]
 pub struct LastTailPosition(pub Option<Position>);
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Score(u64);
-
-impl Score {
-  pub fn increment(&mut self) {
-    self.0 += 1;
-  }
-
-  pub fn reset(&mut self) {
-    self.0 = 0;
-  }
-}
-
-impl Into<String> for Score {
-  fn into(self) -> String {
-    self.0.to_string()
-  }
-}
-
-#[derive(Debug)]
-pub struct ScoreBoard;

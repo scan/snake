@@ -29,6 +29,7 @@ pub struct ScorePlugin;
 impl Plugin for ScorePlugin {
   fn build(&self, app: &mut AppBuilder) {
     app
+      .insert_resource(Score::default())
       .add_startup_system(setup_score.system())
       .add_system(update_score.system());
   }

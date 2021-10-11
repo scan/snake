@@ -13,7 +13,6 @@ impl Plugin for LoadingPlugin {
       .with_collection::<FontAssets>()
       .init_resource::<MaterialAssets>()
       .build(app);
-
     app.add_startup_system(setup.system());
   }
 }

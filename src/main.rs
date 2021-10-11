@@ -10,8 +10,6 @@ use bevy::{
   diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
   prelude::*,
 };
-use direction::CardinalDirection;
-use rand::prelude::random;
 use state::{GamePlugins, GameState};
 
 fn main() {

@@ -2,6 +2,8 @@ use bevy::prelude::*;
 
 use crate::assets::FontAssets;
 
+use super::GameState;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Score(u64);
 
@@ -30,7 +32,7 @@ impl Plugin for ScorePlugin {
   fn build(&self, app: &mut AppBuilder) {
     app
       .insert_resource(Score::default())
-      .add_startup_system(setup_score.system())
+      .add_system_set(SystemSet::on_enter(GameState::Starting).with_system(setup_score.system()))
       .add_system(update_score.system());
   }
 }

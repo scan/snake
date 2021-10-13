@@ -42,7 +42,10 @@ fn spawn_snake(
   mut commands: Commands,
   materials: Res<MaterialAssets>,
   mut segments: ResMut<SnakeSegments>,
+  mut score: ResMut<Score>,
 ) {
+  score.reset();
+
   segments.0 = vec![
     commands
       .spawn_bundle(SpriteBundle {
@@ -248,17 +251,16 @@ fn snake_growth(
 fn game_over(
   mut commands: Commands,
   mut reader: EventReader<GameOverEvent>,
-  mut score: ResMut<Score>,
-  materials: Res<MaterialAssets>,
-  snake_segments: ResMut<SnakeSegments>,
   food: Query<Entity, With<Food>>,
   segments: Query<Entity, With<SnakeSegment>>,
+  mut app_state: ResMut<State<GameState>>,
 ) {
   if reader.iter().next().is_some() {
     for entity in food.iter().chain(segments.iter()) {
       commands.entity(entity).despawn();
     }
-    score.reset();
-    spawn_snake(commands, materials, snake_segments);
+    app_state
+      .push(GameState::GameOver)
+      .expect("Pushing game state failed");
   }
 }

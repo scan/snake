@@ -34,7 +34,8 @@ impl Plugin for RunningPlugin {
           .with_system(snake_eating.system())
           .with_system(snake_growth.system())
           .with_system(game_over.system()),
-      );
+      )
+      .add_system_set(SystemSet::on_exit(GameState::Running).with_system(cleanup.system()));
   }
 }
 
@@ -248,19 +249,21 @@ fn snake_growth(
   }
 }
 
-fn game_over(
+fn game_over(mut reader: EventReader<GameOverEvent>, mut app_state: ResMut<State<GameState>>) {
+  if reader.iter().next().is_some() {
+    app_state
+      .set(GameState::GameOver)
+      .expect("Pushing game state failed");
+  }
+}
+
+fn cleanup(
   mut commands: Commands,
-  mut reader: EventReader<GameOverEvent>,
   food: Query<Entity, With<Food>>,
   segments: Query<Entity, With<SnakeSegment>>,
-  mut app_state: ResMut<State<GameState>>,
+  heads: Query<Entity, With<SnakeHead>>,
 ) {
-  if reader.iter().next().is_some() {
-    for entity in food.iter().chain(segments.iter()) {
-      commands.entity(entity).despawn();
-    }
-    app_state
-      .push(GameState::GameOver)
-      .expect("Pushing game state failed");
+  for entity in food.iter().chain(segments.iter()).chain(heads.iter()) {
+    commands.entity(entity).despawn();
   }
 }

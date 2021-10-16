@@ -18,13 +18,14 @@ fn main() {
       title: "Snake!".to_string(),
       width: 500.0,
       height: 500.0,
+      vsync: true,
       ..Default::default()
     })
     .insert_resource(ClearColor(Color::rgb(0.04, 0.04, 0.04)))
     .add_state(GameState::Loading)
     .add_plugins(DefaultPlugins)
     .add_plugins(GamePlugins)
-    .add_plugin(FrameTimeDiagnosticsPlugin::default())
-    .add_plugin(LogDiagnosticsPlugin::default())
+    // .add_plugin(FrameTimeDiagnosticsPlugin::default())
+    // .add_plugin(LogDiagnosticsPlugin::default())
     .run();
 }

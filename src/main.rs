@@ -25,7 +25,7 @@ fn main() {
     .add_state(GameState::Loading)
     .add_plugins(DefaultPlugins)
     .add_plugins(GamePlugins)
-    // .add_plugin(FrameTimeDiagnosticsPlugin::default())
-    // .add_plugin(LogDiagnosticsPlugin::default())
+    .add_plugin(FrameTimeDiagnosticsPlugin::default())
+    .add_plugin(LogDiagnosticsPlugin::default())
     .run();
 }
